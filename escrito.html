@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Editor vigilante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 0; background:#f7f7fb; }
+    header, footer { background:#111; color:#fff; padding:12px 16px; }
+    main { max-width: 900px; margin: 18px auto; padding: 0 16px; }
+    .panel { background:#fff; border:1px solid #e6e6ee; border-radius:12px; padding:16px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+    .fila { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+    textarea#editor {
+      width:100%; min-height: 50vh; padding:14px 16px; resize: none;
+      border:1px solid #d9d9e3; border-radius:10px; line-height:1.5;
+      outline:none; background:#fff;
+      /* Evitar selección/arrastre básicos */
+      user-select: none; -webkit-user-select:none; -ms-user-select:none;
+    }
+    textarea#editor:focus { border-color:#6b7cff; box-shadow:0 0 0 3px rgba(107,124,255,.2); }
+    button { cursor:pointer; border:none; border-radius:10px; padding:10px 14px; }
+    .btn { background:#6b7cff; color:#fff; }
+    .btn.sec { background:#e6e6ee; color:#111; }
+    .status { margin-top:10px; font-size:.95rem; color:#333; }
+    .warn  { color:#b10000; font-weight:600; }
+    .ok    { color:#0a7a34; font-weight:600; }
+    .row   { margin:12px 0; }
+    .muted { color:#666; font-size:.9rem; }
+    .contador { font-weight:700; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Editor vigilante</strong> — sin copiar, sin pegar, con foco vigilado 🕵️
+  </header>
+
+  <main>
+    <div class="panel">
+      <div class="row">
+        <div class="fila">
+          <button id="btnStart" class="btn">Iniciar (pantalla completa)</button>
+          <button id="btnFinish" class="btn sec">Finalizar y guardar</button>
+          <span class="muted">Se deshabilita copiar/pegar/menú contextual y se monitorea el foco.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="editor"><strong>Tu respuesta:</strong></label>
+        <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+          placeholder="Escribí tu texto acá. Copiar/pegar está deshabilitado…"></textarea>
+      </div>
+
+      <div class="row status">
+        <div>Infracciones de foco/visibilidad: <span id="infCount" class="contador">0</span> (límite: <span id="infLimit">3</span>)</div>
+        <div id="msg" class="muted">Consejo: mantené la ventana en primer plano y en pantalla completa.</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="muted">Nota: no se puede impedir 100% Alt+Tab/Win u otras acciones del sistema operativo.</span>
+  </footer>
+
+  <script>
+    // ===== Configuración =====
+    const INF_LIMIT = 3;            // cantidad de "fuera de foco" permitidas
+    const BLOCK_PRINT = true;       // intentar bloquear Ctrl+P
+    const BLOCK_DEVTOOLS = true;    // intentar bloquear F12 / Ctrl+Shift+I
+    const BLOCK_NEW_TABS = true;    // bloquear Ctrl+T/Ctrl+N/Ctrl+W (lo que permita el navegador)
+    const BLOCK_SAVE = true;        // bloquear Ctrl+S
+    const WARN_TEXT = "Acción no permitida.";
+    const FOCUS_WARN = "No abandones la pestaña ni salgas de pantalla completa.";
+
+    // ===== Elementos =====
+    const editor   = document.getElementById('editor');
+    const btnStart = document.getElementById('btnStart');
+    const btnFinish= document.getElementById('btnFinish');
+    const msg      = document.getElementById('msg');
+    const infCount = document.getElementById('infCount');
+    const infLimit = document.getElementById('infLimit');
+    infLimit.textContent = INF_LIMIT;
+
+    let infractions = 0;
+    let locked = false;
+
+    function setMessage(text, type="") {
+      msg.textContent = text;
+      msg.className = type ? `status ${type}` : 'status';
+    }
+
+    // ===== Pantalla completa =====
+    async function goFullscreen() {
+      try {
+        // Debe iniciarse por un gesto del usuario (click)
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+        setMessage("Pantalla completa activada. ¡A escribir! ✍️", "ok");
+        editor.focus();
+      } catch (e) {
+        setMessage("No se pudo activar pantalla completa. Permití la acción en el navegador.", "warn");
+      }
+    }
+
+    function exitFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+    }
+
+    // ===== Bloqueos de copiar/pegar/menú/contexto =====
+    function blockClipboardAndSelection(el) {
+      const block = e => { e.preventDefault(); setMessage(WARN_TEXT, "warn"); };
+      ['copy','cut','paste','contextmenu','dragstart','drop'].forEach(ev => {
+        el.addEventListener(ev, block);
+      });
+      el.addEventListener('selectstart', block);
+    }
+    blockClipboardAndSelection(editor);
+
+    // También a nivel documento
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // ===== Atajos de teclado comunes a bloquear =====
+    document.addEventListener('keydown', e => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+
+      // Copiar/pegar/cortar/seleccionar todo
+      if (ctrl && ['c','v','x','a','s','p','u','t','n','w'].includes(e.key.toLowerCase())) {
+        if (e.key.toLowerCase()==='s' && !BLOCK_SAVE) return;
+        if (e.key.toLowerCase()==='p' && !BLOCK_PRINT) return;
+        if (['t','n','w'].includes(e.key.toLowerCase()) && !BLOCK_NEW_TABS) return;
+        e.preventDefault(); setMessage(WARN_TEXT, "warn");
+      }
+
+      // F12, Ctrl+Shift+I (DevTools)
+      if ((e.key === 'F12' && BLOCK_DEVTOOLS) || (ctrl && shift && e.key.toLowerCase()==='i' && BLOCK_DEVTOOLS)) {
+        e.preventDefault(); setMessage(WARN_TEXT, "warn");
+      }
+    });
+
+    // ===== Detección de pérdida de foco / visibilidad =====
+    function registerInfraction(reason) {
+      if (locked) return;
+      infractions++;
+      infCount.textContent = infractions;
+      setMessage(`${FOCUS_WARN} (Motivo: ${reason}). Intento ${infractions}/${INF_LIMIT}`, "warn");
+
+      if (infractions >= INF_LIMIT) {
+        locked = true;
+        editor.setAttribute('readonly', 'readonly');
+        editor.blur();
+        setMessage("Se alcanzó el límite de infracciones. Edición bloqueada. Enviá lo que tengas.", "warn");
+      }
+    }
+
+    window.addEventListener('blur', () => registerInfraction('blur de ventana'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') registerInfraction('pestaña oculta');
+    });
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) registerInfraction('salida de pantalla completa');
+    });
+
+    // ===== Confirmación al salir (suave, algunos navegadores lo ignoran) =====
+    window.addEventListener('beforeunload', (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    // ===== Botones =====
+    btnStart.addEventListener('click', goFullscreen);
+
+    btnFinish.addEventListener('click', () => {
+      const contenido = editor.value;
+      exitFullscreen();
+      // Simula “guardar”: descarga un .txt
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'entrega.txt';
+      document.body.appendChild(a); a.click();
+      URL.revokeObjectURL(url); a.remove();
+      setMessage("Archivo descargado. Podés subirlo al aula virtual. ✅", "ok");
+    });
+  </script>
+</body>
+</html>
