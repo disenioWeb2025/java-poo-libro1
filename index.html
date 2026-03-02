@@ -2,155 +2,136 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Plantilla de Evaluación - UTU</title>
+  <title>Evaluación Técnica - UTU</title>
   <style>
-    /* Estilos base (Mantenemos la estética profesional) */
-    :root { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { margin: 0; background:#f0f2f5; color: #1c1e21; }
-    header { background:#003366; color:#fff; padding:20px; text-align: center; border-bottom: 4px solid #ffcc00; }
-    main { max-width: 900px; margin: 20px auto; padding: 0 15px; }
-    .panel-docente { background:#fff; border-radius:8px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .instrucciones { background: #fff3cd; border-left: 5px solid #ffeeba; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-    #toolbar { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 8px 8px 0 0; display: flex; gap: 5px; }
+    :root { font-family: 'Segoe UI', Arial, sans-serif; }
+    body { margin: 0; background:#f4f7f6; color: #1a1a1a; }
+    header { background:#003366; color:#fff; padding:15px; text-align: center; border-bottom: 4px solid #ffcc00; }
+    main { max-width: 950px; margin: 20px auto; padding: 0 20px; }
+    .card { background:white; border-radius:10px; padding:20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    #toolbar { background:#eee; padding:10px; border-radius:8px 8px 0 0; border:1px solid #ccc; border-bottom:none; }
     #editor { 
-        border: 1px solid #ddd; border-top: none; min-height: 400px; padding: 20px; 
-        background: white; outline: none; border-radius: 0 0 8px 8px;
+      border:1px solid #ccc; min-height:450px; padding:20px; background:#fff; 
+      outline:none; border-radius:0 0 8px 8px; line-height:1.6;
     }
-    .btn-principal { background: #003366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    .btn-descarga { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
-    .status-bar { margin-top: 15px; font-size: 0.9em; display: flex; justify-content: space-between; align-items: center; }
-    .alerta { color: #d93025; font-weight: bold; }
+    .btn { padding:10px 18px; border-radius:6px; cursor:pointer; font-weight:bold; border:none; }
+    .btn-start { background:#003366; color:white; }
+    .btn-save { background:#28a745; color:white; margin-left:10px; }
+    .status { margin-top:15px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; display:flex; justify-content:space-between; }
+    .error { color:#d32f2f; font-weight:bold; }
   </style>
 </head>
 <body>
 
 <header>
-    <h1 id="displayAsignatura">Asignatura: [Nombre de la Materia]</h1>
-    <p id="displayDocente">Docente: [Nombre del Profesor]</p>
+    <h1 id="txtMateria">Asignatura</h1>
+    <p id="txtDocente">Docente</p>
 </header>
 
 <main>
-    <div class="panel-docente">
-        <div class="instrucciones">
-            <strong>⚠️ IMPORTANTE PARA EL ESTUDIANTE:</strong>
-            <ul id="listaConsignas">
-                <li>No podés salir de la pantalla completa una vez iniciado.</li>
-                <li>El uso de copiar/pegar está bloqueado.</li>
-                <li>Al finalizar, presioná "Descargar Entrega" y subí el archivo a la plataforma correspondiente.</li>
-            </ul>
-        </div>
-
-        <div class="row" style="margin-bottom: 15px;">
-            <button id="btnStart" class="btn-principal">Iniciar Evaluación</button>
-            <button id="btnFinish" class="btn-descarga">Descargar Entrega (.doc)</button>
+    <div class="card">
+        <div style="margin-bottom:15px;">
+            <button id="btnStart" class="btn btn-start">Iniciar Examen (Pantalla Completa)</button>
+            <button id="btnFinish" class="btn btn-save">Finalizar y Descargar Entrega</button>
         </div>
 
         <div id="toolbar">
-            <button onclick="execCmd('bold')"><b>N</b></button>
-            <button onclick="execCmd('underline')"><u>S</u></button>
-            <button onclick="execCmd('italic')"><i>I</i></button>
-            <input type="color" id="colorText" title="Color de letra">
+            <button onclick="cmd('bold')"><b>N</b></button>
+            <button onclick="cmd('underline')"><u>S</u></button>
+            <button onclick="cmd('italic')"><i>I</i></button>
+            <input type="color" id="cp" title="Color de texto">
         </div>
-        
-        <div id="editor" contenteditable="true">
-            Comenzá a escribir aquí tu respuesta...
-        </div>
+        <div id="editor" contenteditable="true">Haga clic en 'Iniciar' para comenzar a escribir...</div>
 
-        <div class="status-bar">
-            <span>Infracciones: <span id="infCount" class="alerta">0</span> / <span id="maxInf">3</span></span>
-            <span id="msgRed">Estado: Esperando inicio...</span>
+        <div class="status">
+            <div>Infracciones detectadas: <span id="count" class="error">0</span> / <span id="max">3</span></div>
+            <div id="statusMsg">Estado: Esperando inicio</div>
         </div>
     </div>
 </main>
 
 <script>
-    // ==========================================
-    // SECCIÓN PARA EL DOCENTE: CONFIGURACIÓN
-    // ==========================================
+    // Configuración del docente
     const CONFIG = {
-        asignatura: "Programación Java - 2do BD",
-        docente: "Prof. Juan Pérez",
-        limiteInfracciones: 3,
-        nombreArchivo: "examen_programacion.doc"
+        materia: "Programación Java / Robótica",
+        docente: "Prof. Eli Izquierdo",
+        maxInfracciones: 3,
+        archivo: "entrega_examen.doc"
     };
 
-    // Aplicar configuración al DOM
-    document.getElementById('displayAsignatura').textContent = CONFIG.asignatura;
-    document.getElementById('displayDocente').textContent = `Docente: ${CONFIG.docente}`;
-    document.getElementById('maxInf').textContent = CONFIG.limiteInfracciones;
+    document.getElementById('txtMateria').textContent = CONFIG.materia;
+    document.getElementById('txtDocente').textContent = "Docente: " + CONFIG.docente;
+    document.getElementById('max').textContent = CONFIG.maxInfracciones;
 
-    // ==========================================
-    // LÓGICA DEL SISTEMA (No tocar a menos que sea necesario)
-    // ==========================================
     let infracciones = 0;
     let bloqueado = false;
-    const editor = document.getElementById('editor');
+    let logAuditoria = []; // Aquí se guarda el rastro
 
-    function execCmd(cmd) { document.execCommand(cmd, false, null); editor.focus(); }
+    function cmd(c) { document.execCommand(c, false, null); document.getElementById('editor').focus(); }
+    document.getElementById('cp').oninput = (e) => document.execCommand('foreColor', false, e.target.value);
 
-    document.getElementById('colorText').addEventListener('input', (e) => {
-        document.execCommand('foreColor', false, e.target.value);
-    });
+    // Registro detallado de infracciones
+    function track(motivo) {
+        if (bloqueado) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        logAuditoria.push({ hora: timestamp, evento: motivo });
+        
+        infracciones++;
+        document.getElementById('count').textContent = infracciones;
+        document.getElementById('statusMsg').innerHTML = `<span class="error">⚠️ Infracción: ${motivo}</span>`;
 
-    // Bloqueos de teclado y mouse
-    editor.addEventListener('paste', e => e.preventDefault());
-    editor.addEventListener('copy', e => e.preventDefault());
-    editor.addEventListener('contextmenu', e => e.preventDefault());
-
-    // 1. Creamos el historial
-let historialActividad = [];
-
-function registrarInfraccion(motivo) {
-    if (bloqueado) return;
-    
-    const ahora = new Date().toLocaleTimeString();
-    const evento = { hora: ahora, accion: motivo };
-    historialActividad.push(evento); // Guardamos qué pasó y cuándo
-
-    infracciones++;
-    document.getElementById('infCount').textContent = infracciones;
-    
-    // ... resto de la lógica de bloqueo ...
-}
-
-// 2. Al descargar, adjuntamos el reporte al final
-document.getElementById('btnFinish').addEventListener('click', () => {
-    let reporteInfracciones = "<h3>--- Reporte de Integridad Docente ---</h3><ul>";
-    
-    if(historialActividad.length === 0) {
-        reporteInfracciones += "<li>No se registraron infracciones.</li>";
-    } else {
-        historialActividad.forEach(item => {
-            reporteInfracciones += `<li>[${item.hora}] Infracción: ${item.accion}</li>`;
-        });
+        if (infracciones >= CONFIG.maxInfracciones) {
+            bloqueado = true;
+            document.getElementById('editor').contentEditable = "false";
+            alert("Límite de infracciones alcanzado. El editor se ha bloqueado.");
+        }
     }
-    reporteInfracciones += "</ul>";
 
-    const contenidoFinal = editor.innerHTML + "<br><hr>" + reporteInfracciones;
-    
-    // Procedimiento de descarga del Blob...
-});
-    // Detectar cambios de foco o salida de pantalla completa
-    window.addEventListener('blur', () => registrarInfraccion("Salida de ventana"));
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) registrarInfraccion("Salida de pantalla completa");
-    });
+    // Eventos de monitoreo
+    window.onblur = () => track("Cambio de ventana o aplicación (Alt+Tab / Inicio)");
+    document.onvisibilitychange = () => {
+        if (document.hidden) track("Cambio de pestaña en el navegador");
+    };
+    document.onfullscreenchange = () => {
+        if (!document.fullscreenElement) track("Salió del modo pantalla completa");
+    };
 
-    document.getElementById('btnStart').addEventListener('click', () => {
-        document.documentElement.requestFullscreen().catch(() => {
-            alert("Por favor, permití la pantalla completa para comenzar.");
-        });
-        document.getElementById('msgRed').textContent = "Estado: Evaluación en curso";
-    });
+    // Bloqueos de seguridad básicos
+    const e = document.getElementById('editor');
+    e.onpaste = (ev) => { ev.preventDefault(); track("Intento de pegado de texto (Paste)"); };
+    e.oncontextmenu = (ev) => ev.preventDefault();
 
-    document.getElementById('btnFinish').addEventListener('click', () => {
-        const contenido = editor.innerHTML;
-        const blob = new Blob(['\ufeff', contenido], { type: 'application/msword' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = CONFIG.nombreArchivo;
-        link.click();
-    });
+    document.getElementById('btnStart').onclick = () => {
+        document.documentElement.requestFullscreen().catch(() => alert("Habilite pantalla completa."));
+        document.getElementById('statusMsg').textContent = "Estado: Examen en curso";
+    };
+
+    document.getElementById('btnFinish').onclick = () => {
+        if(document.fullscreenElement) document.exitFullscreen();
+        
+        // Generar el reporte de auditoría para el docente
+        let reporte = `<br><br><hr><h3>REPORTE DE AUDITORÍA DOCENTE</h3>`;
+        reporte += `<p>Materia: ${CONFIG.materia} | Estudiante: ____________________</p>`;
+        
+        if(logAuditoria.length === 0) {
+            reporte += `<p style="color:green;">✅ No se registraron infracciones durante la sesión.</p>`;
+        } else {
+            reporte += `<p style="color:red;">❌ Infracciones registradas:</p><ul>`;
+            logAuditoria.forEach(item => {
+                reporte += `<li><strong>[${item.hora}]</strong> - ${item.evento}</li>`;
+            });
+            reporte += `</ul>`;
+        }
+
+        const body = `<html><head><meta charset="utf-8"></head><body>${e.innerHTML}${reporte}</body></html>`;
+        const blob = new Blob(['\ufeff', body], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = CONFIG.archivo;
+        a.click();
+    };
 </script>
 </body>
 </html>
