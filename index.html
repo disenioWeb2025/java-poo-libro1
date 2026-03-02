@@ -97,19 +97,39 @@
     editor.addEventListener('copy', e => e.preventDefault());
     editor.addEventListener('contextmenu', e => e.preventDefault());
 
-    function registrarInfraccion(motivo) {
-        if (bloqueado) return;
-        infracciones++;
-        document.getElementById('infCount').textContent = infracciones;
-        document.getElementById('msgRed').textContent = "⚠️ Infracción detectada: " + motivo;
-        
-        if (infracciones >= CONFIG.limiteInfracciones) {
-            bloqueado = true;
-            editor.contentEditable = "false";
-            alert("Evaluación bloqueada por superar el límite de salidas permitidas.");
-        }
-    }
+    // 1. Creamos el historial
+let historialActividad = [];
 
+function registrarInfraccion(motivo) {
+    if (bloqueado) return;
+    
+    const ahora = new Date().toLocaleTimeString();
+    const evento = { hora: ahora, accion: motivo };
+    historialActividad.push(evento); // Guardamos qué pasó y cuándo
+
+    infracciones++;
+    document.getElementById('infCount').textContent = infracciones;
+    
+    // ... resto de la lógica de bloqueo ...
+}
+
+// 2. Al descargar, adjuntamos el reporte al final
+document.getElementById('btnFinish').addEventListener('click', () => {
+    let reporteInfracciones = "<h3>--- Reporte de Integridad Docente ---</h3><ul>";
+    
+    if(historialActividad.length === 0) {
+        reporteInfracciones += "<li>No se registraron infracciones.</li>";
+    } else {
+        historialActividad.forEach(item => {
+            reporteInfracciones += `<li>[${item.hora}] Infracción: ${item.accion}</li>`;
+        });
+    }
+    reporteInfracciones += "</ul>";
+
+    const contenidoFinal = editor.innerHTML + "<br><hr>" + reporteInfracciones;
+    
+    // Procedimiento de descarga del Blob...
+});
     // Detectar cambios de foco o salida de pantalla completa
     window.addEventListener('blur', () => registrarInfraccion("Salida de ventana"));
     document.addEventListener('fullscreenchange', () => {
