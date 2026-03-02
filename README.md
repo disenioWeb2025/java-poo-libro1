@@ -57,4 +57,13 @@ Una vez finalizado el tiempo, el estudiante debe:
 * **Compatibilidad:** Funciona de manera óptima en sistemas operativos de escritorio.
 
 ---
+## ⚖️ Privacidad y Ética Educativa
+
+Este proyecto ha sido desarrollado bajo principios de **transparencia y minimización de datos**, cumpliendo con los siguientes criterios:
+
+1.  **Privacidad de Aplicaciones:** Debido a las restricciones de seguridad (*sandboxing*) de los navegadores modernos, esta herramienta **no puede ni intenta** acceder al historial de navegación, archivos personales, cámara, micrófono o aplicaciones externas (como WhatsApp, Discord o Gemini) del estudiante.
+2.  **Monitoreo del Foco:** El sistema únicamente detecta eventos de pérdida de foco en su propia pestaña (eventos `blur` y `visibilitychange`). Registra **cuándo** el estudiante abandona la evaluación, pero **nunca hacia dónde** se dirige.
+3.  **Ejecución en el Cliente:** Todo el procesamiento ocurre de forma local en el navegador del estudiante. No se envían datos a servidores externos; la información de auditoría se destruye al cerrar la pestaña, a menos que se descargue el archivo final.
+4.  **Uso Pedagógico:** El reporte de integridad tiene como fin exclusivo servir de insumo para que el docente pueda validar la autoría del texto en el marco de una evaluación presencial controlada.
+   
 *Desarrollado como apoyo a la labor docente en el ámbito técnico.*
