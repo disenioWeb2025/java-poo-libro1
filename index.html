@@ -2,62 +2,83 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Evaluación Técnica - UTU</title>
   <style>
-    :root { font-family: 'Segoe UI', Arial, sans-serif; }
-    body { margin: 0; background:#f4f7f6; color: #1a1a1a; }
+    :root { font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; background:#f4f7f6; color: #1a1a1a; touch-action: manipulation; }
     header { background:#003366; color:#fff; padding:15px; text-align: center; border-bottom: 4px solid #ffcc00; }
-    main { max-width: 950px; margin: 20px auto; padding: 0 20px; }
-    .card { background:white; border-radius:10px; padding:20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    #toolbar { background:#eee; padding:10px; border-radius:8px 8px 0 0; border:1px solid #ccc; border-bottom:none; }
-    #editor { 
-      border:1px solid #ccc; min-height:450px; padding:20px; background:#fff; 
-      outline:none; border-radius:0 0 8px 8px; line-height:1.6;
+    main { max-width: 950px; margin: 10px auto; padding: 0 15px; }
+    .card { background:white; border-radius:10px; padding:15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    
+    /* Toolbar adaptable */
+    #toolbar { 
+        background:#eee; padding:10px; border-radius:8px 8px 0 0; border:1px solid #ccc; 
+        display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;
     }
-    .btn { padding:10px 18px; border-radius:6px; cursor:pointer; font-weight:bold; border:none; }
+    #editor { 
+      border:1px solid #ccc; min-height:400px; padding:15px; background:#fff; 
+      outline:none; border-radius:0 0 8px 8px; line-height:1.6; font-size: 16px; /* Evita zoom en iOS */
+    }
+    
+    /* Botones responsivos */
+    .btn-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    .btn { padding: 12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; border:none; flex: 1; min-width: 150px; }
     .btn-start { background:#003366; color:white; }
-    .btn-save { background:#28a745; color:white; margin-left:10px; }
-    .status { margin-top:15px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; display:flex; justify-content:space-between; }
+    .btn-save { background:#28a745; color:white; }
+    
+    .status { margin-top:15px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.85em; display:flex; justify-content:space-between; flex-wrap: wrap; }
     .error { color:#d32f2f; font-weight:bold; }
+
+    /* Ajustes específicos para celulares */
+    @media (max-width: 600px) {
+        header h1 { font-size: 1.2rem; }
+        .btn { font-size: 0.9rem; padding: 15px; }
+        #editor { min-height: 300px; }
+    }
   </style>
 </head>
 <body>
 
 <header>
-    <h1 id="txtMateria">Asignatura</h1>
+    <h1 id="txtMateria">Cargando asignatura...</h1>
     <p id="txtDocente">Docente</p>
 </header>
 
 <main>
     <div class="card">
-        <div style="margin-bottom:15px;">
-            <button id="btnStart" class="btn btn-start">Iniciar Examen (Pantalla Completa)</button>
-            <button id="btnFinish" class="btn btn-save">Finalizar y Descargar Entrega</button>
+        <div class="btn-container">
+            <button id="btnStart" class="btn btn-start">Iniciar Examen</button>
+            <button id="btnFinish" class="btn btn-save">Descargar Entrega</button>
         </div>
 
         <div id="toolbar">
-            <button onclick="cmd('bold')"><b>N</b></button>
-            <button onclick="cmd('underline')"><u>S</u></button>
-            <button onclick="cmd('italic')"><i>I</i></button>
-            <input type="color" id="cp" title="Color de texto">
+            <button onclick="cmd('bold')" style="padding:8px 12px;"><b>B</b></button>
+            <button onclick="cmd('underline')" style="padding:8px 12px;"><u>U</u></button>
+            <input type="color" id="cp" style="height:35px; width:40px; border:none; background:none;">
         </div>
-        <div id="editor" contenteditable="true">Haga clic en 'Iniciar' para comenzar a escribir...</div>
+        <div id="editor" contenteditable="true">Presioná 'Iniciar' para habilitar la escritura...</div>
 
         <div class="status">
-            <div>Infracciones detectadas: <span id="count" class="error">0</span> / <span id="max">3</span></div>
+            <div>Infracciones: <span id="count" class="error">0</span> / <span id="max">3</span></div>
             <div id="statusMsg">Estado: Esperando inicio</div>
         </div>
     </div>
 </main>
 
 <script>
-    // Configuración del docente
     const CONFIG = {
-        materia: "Programación Java / Robótica",
+        materia: "Programación / Robótica Aplicada",
         docente: "Prof. Eli Izquierdo",
-        maxInfracciones: 3,
-        archivo: "entrega_examen.doc"
+        maxInfracciones: 5, // Aumentamos a 5 por ser entorno móvil/PC mixto
+        archivo: "entrega_examen_utu.doc"
     };
+
+    // Detectar si es móvil para ajustar sensibilidad
+    const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(esMovil) {
+        CONFIG.maxInfracciones = 6; // Más tolerancia en móviles por notificaciones
+    }
 
     document.getElementById('txtMateria').textContent = CONFIG.materia;
     document.getElementById('txtDocente').textContent = "Docente: " + CONFIG.docente;
@@ -65,70 +86,57 @@
 
     let infracciones = 0;
     let bloqueado = false;
-    let logAuditoria = []; // Aquí se guarda el rastro
+    let logAuditoria = [];
 
     function cmd(c) { document.execCommand(c, false, null); document.getElementById('editor').focus(); }
     document.getElementById('cp').oninput = (e) => document.execCommand('foreColor', false, e.target.value);
 
-    // Registro detallado de infracciones
     function track(motivo) {
         if (bloqueado) return;
         
-        const timestamp = new Date().toLocaleTimeString();
-        logAuditoria.push({ hora: timestamp, evento: motivo });
+        const ahora = new Date().toLocaleTimeString();
+        logAuditoria.push({ hora: ahora, evento: motivo });
         
         infracciones++;
         document.getElementById('count').textContent = infracciones;
-        document.getElementById('statusMsg').innerHTML = `<span class="error">⚠️ Infracción: ${motivo}</span>`;
+        document.getElementById('statusMsg').innerHTML = `<span class="error">⚠️ ${motivo}</span>`;
 
         if (infracciones >= CONFIG.maxInfracciones) {
             bloqueado = true;
             document.getElementById('editor').contentEditable = "false";
-            alert("Límite de infracciones alcanzado. El editor se ha bloqueado.");
+            alert("Evaluación bloqueada por demasiadas infracciones.");
         }
     }
 
-    // Eventos de monitoreo
-    window.onblur = () => track("Cambio de ventana o aplicación (Alt+Tab / Inicio)");
-    document.onvisibilitychange = () => {
-        if (document.hidden) track("Cambio de pestaña en el navegador");
+    // Eventos optimizados
+    window.onblur = () => track(esMovil ? "Salida de app / Notificación" : "Cambio de ventana");
+    document.onvisibilitychange = () => { if (document.hidden) track("Pestaña oculta"); };
+    
+    // El pegado siempre se bloquea
+    document.getElementById('editor').onpaste = (ev) => { 
+        ev.preventDefault(); 
+        track("Intento de pegado (Paste)"); 
     };
-    document.onfullscreenchange = () => {
-        if (!document.fullscreenElement) track("Salió del modo pantalla completa");
-    };
-
-    // Bloqueos de seguridad básicos
-    const e = document.getElementById('editor');
-    e.onpaste = (ev) => { ev.preventDefault(); track("Intento de pegado de texto (Paste)"); };
-    e.oncontextmenu = (ev) => ev.preventDefault();
 
     document.getElementById('btnStart').onclick = () => {
-        document.documentElement.requestFullscreen().catch(() => alert("Habilite pantalla completa."));
-        document.getElementById('statusMsg').textContent = "Estado: Examen en curso";
+        if (!esMovil) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+        document.getElementById('editor').focus();
+        document.getElementById('statusMsg').textContent = "Estado: En curso";
     };
 
     document.getElementById('btnFinish').onclick = () => {
-        if(document.fullscreenElement) document.exitFullscreen();
-        
-        // Generar el reporte de auditoría para el docente
-        let reporte = `<br><br><hr><h3>REPORTE DE AUDITORÍA DOCENTE</h3>`;
-        reporte += `<p>Materia: ${CONFIG.materia} | Estudiante: ____________________</p>`;
-        
-        if(logAuditoria.length === 0) {
-            reporte += `<p style="color:green;">✅ No se registraron infracciones durante la sesión.</p>`;
-        } else {
-            reporte += `<p style="color:red;">❌ Infracciones registradas:</p><ul>`;
-            logAuditoria.forEach(item => {
-                reporte += `<li><strong>[${item.hora}]</strong> - ${item.evento}</li>`;
-            });
-            reporte += `</ul>`;
-        }
+        let reporte = `<br><br><hr><h4>AUDITORÍA DOCENTE (UTU)</h4><ul>`;
+        logAuditoria.forEach(item => {
+            reporte += `<li>[${item.hora}] - ${item.evento}</li>`;
+        });
+        reporte += `</ul><p>Dispositivo: ${esMovil ? 'Móvil' : 'PC/Escritorio'}</p>`;
 
-        const body = `<html><head><meta charset="utf-8"></head><body>${e.innerHTML}${reporte}</body></html>`;
+        const body = `<html><head><meta charset="utf-8"></head><body>${document.getElementById('editor').innerHTML}${reporte}</body></html>`;
         const blob = new Blob(['\ufeff', body], { type: 'application/msword' });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = URL.createObjectURL(blob);
         a.download = CONFIG.archivo;
         a.click();
     };
